@@ -25,6 +25,7 @@ public final class EnWordChecker implements IWordChecker {
 
     /**
      * 构造器私有
+     *
      * @since 0.0.1
      */
     private EnWordChecker() {
@@ -32,6 +33,7 @@ public final class EnWordChecker implements IWordChecker {
 
     /**
      * 静态内部类，实现单例
+     *
      * @since 0.0.2
      */
     private static class EnWordCheckerHolder {
@@ -56,7 +58,7 @@ public final class EnWordChecker implements IWordChecker {
     @Override
     public final String correct(String word, final IWordCheckerContext context) {
         // 优化，如果拼写正确，则直接返回本身。
-        if(isCorrect(word, context)) {
+        if (isCorrect(word, context)) {
             return word;
         }
 
@@ -77,7 +79,7 @@ public final class EnWordChecker implements IWordChecker {
         List<CandidateDto> candidateList = buildCandidateList(editDistanceWordSetMap, context);
 
         // fast-return
-        if(CollectionUtil.isEmpty(candidateList)) {
+        if (CollectionUtil.isEmpty(candidateList)) {
             return Collections.singletonList(word);
         }
 
@@ -87,7 +89,8 @@ public final class EnWordChecker implements IWordChecker {
 
     /**
      * 构建所有符合的待选列表
-     * @param map map
+     *
+     * @param map     map
      * @param context 上下文
      * @return 结果
      * @since 1.1.0
@@ -99,16 +102,16 @@ public final class EnWordChecker implements IWordChecker {
         List<CandidateDto> resultList = new ArrayList<>();
         // 用于单词去重
         Set<String> allWordSet = new HashSet<>();
-        for(Map.Entry<Integer, Set<String>> entry : map.entrySet()) {
+        for (Map.Entry<Integer, Set<String>> entry : map.entrySet()) {
             int distance = entry.getKey();
             Set<String> wordSet = entry.getValue();
 
-            for(String word : wordSet) {
-                if(allWordSet.contains(word)) {
+            for (String word : wordSet) {
+                if (allWordSet.contains(word)) {
                     continue;
                 }
 
-                if(!wordDataMap.containsKey(word)) {
+                if (!wordDataMap.containsKey(word)) {
                     continue;
                 }
 
@@ -129,15 +132,16 @@ public final class EnWordChecker implements IWordChecker {
 
     /**
      * 根据编辑距离，构建所有的可能性 map
-     *
+     * <p>
      * key: 当前的编辑距离
-     * value: 所有的肯能行 set
+     * value: 所有的可能值 set
+     *
      * @param formatWord 格式化后的单词
      * @return 结果
      */
     private Map<Integer, Set<String>> buildEditDistanceWordSetMap(String formatWord,
                                                                   int maxEditDistance) {
-        Map<Integer, Set<String>> map = new HashMap<>(maxEditDistance+1);
+        Map<Integer, Set<String>> map = new HashMap<>(maxEditDistance + 1);
 
         // 加入自己
         Set<String> words = new HashSet<>();
@@ -145,15 +149,15 @@ public final class EnWordChecker implements IWordChecker {
         map.put(0, words);
 
         // 遍历处理
-        for(int i = 1; i <= maxEditDistance; i++) {
+        for (int i = 1; i <= maxEditDistance; i++) {
             // 上一级的所有可能性
-            Set<String> preLevelWords = map.get(i-1);
+            Set<String> preLevelWords = map.get(i - 1);
 
             // 临时存放，避免一直变化
             // 其实有多少种可能，应该是上面的 size * 多少种可能性。避免扩容
             Set<String> allWordSet = new HashSet<>();
 
-            for(String word : preLevelWords) {
+            for (String word : preLevelWords) {
                 // 编辑距离为1的单词
                 Set<String> otherWordSet = edits(word);
                 allWordSet.addAll(otherWordSet);
@@ -181,11 +185,11 @@ public final class EnWordChecker implements IWordChecker {
 
         int limitSize = Math.min(limit, candidateDtos.size());
         for (CandidateDto dto : candidateDtos) {
-            if(result.size() >= limitSize) {
+            if (result.size() >= limitSize) {
                 break;
             }
-            if(result.contains(dto.word())) {
-               continue;
+            if (result.contains(dto.word())) {
+                continue;
             }
             result.add(dto.word());
         }
@@ -197,28 +201,47 @@ public final class EnWordChecker implements IWordChecker {
         return correctList(word, Integer.MAX_VALUE, context);
     }
 
+    // 编辑距离：是指将一个字符串转换为另一个字符串所需的最少编辑操作次数
+    // 常见操作：插入一个字符、删除一个字符、替换一个字符
+    // 在本函数中，操作有：删除一个字符，交换两个字符的位置，替换一个字符，插入一个字符
+
     /**
-     * 构建出当前单词的所有可能错误情况
-     *
-     * @param word 输入单词
-     *
-     * @return 返回结果
-     * @since 0.0.1
+     * @param word：传入的单词
+     * @return 返回该单词编辑距离为1的列表
      */
-    private Set<String> edits(String word) {
+    public Set<String> edits(String word) {
         Set<String> resultSet = new HashSet<>();
 
+        // 例如对于单词 hello，删除一个字符
+        // 运行结果：
+        //  ello
+        //  hllo
+        //  helo
+        //  helo
+        //  hell
         for (int i = 0; i < word.length(); ++i) {
             resultSet.add(word.substring(0, i) + word.substring(i + 1));
         }
+        // 交换两个字符的位置
+        // 运行结果
+        //  ehllo
+        //  hlelo
+        //  hello
+        //  helol
         for (int i = 0; i < word.length() - 1; ++i) {
             resultSet.add(word.substring(0, i) + word.substring(i + 1, i + 2) + word.substring(i, i + 1) + word.substring(i + 2));
         }
+        // 运行结果  替换一个字符
+        // aello	bello	cello	dello	eello	fello	gello	hello	iello	jello	kello	lello	mello	nello	oello	pello	qello	rello	sello	tello	uello	vello	wello	xello	yello	zello	hallo	hbllo	hcllo	hdllo	hello	hfllo	hgllo	hhllo	hillo	hjllo	hkllo	hlllo	hmllo	hnllo	hollo	hpllo	hqllo	hrllo	hsllo	htllo	hullo	hvllo	hwllo	hxllo	hyllo	hzllo	healo	heblo	heclo	hedlo	heelo	heflo	heglo	hehlo	heilo	hejlo	heklo	hello	hemlo	henlo	heolo	heplo	heqlo	herlo	heslo	hetlo	heulo	hevlo	hewlo	hexlo	heylo	hezlo	helao	helbo	helco	heldo	heleo	helfo	helgo	helho	helio	heljo	helko	hello	helmo	helno	heloo	helpo	helqo	helro	helso	helto	heluo	helvo	helwo	helxo	helyo	helzo	hella	hellb	hellc	helld	helle	hellf	hellg	hellh	helli	hellj	hellk	helll	hellm	helln	hello	hellp	hellq	hellr	hells	hellt	hellu	hellv	hellw	hellx	helly	hellz
         for (int i = 0; i < word.length(); ++i) {
             for (char c = 'a'; c <= 'z'; ++c) {
                 resultSet.add(word.substring(0, i) + c + word.substring(i + 1));
             }
         }
+
+        // 插入一个字符
+        // 运行结果:
+        // ahello	bhello	chello	dhello	ehello	fhello	ghello	hhello	ihello	jhello	khello	lhello	mhello	nhello	ohello	phello	qhello	rhello	shello	thello	uhello	vhello	whello	xhello	yhello	zhello	haello	hbello	hcello	hdello	heello	hfello	hgello	hhello	hiello	hjello	hkello	hlello	hmello	hnello	hoello	hpello	hqello	hrello	hsello	htello	huello	hvello	hwello	hxello	hyello	hzello	heallo	hebllo	hecllo	hedllo	heello	hefllo	hegllo	hehllo	heillo	hejllo	hekllo	helllo	hemllo	henllo	heollo	hepllo	heqllo	herllo	hesllo	hetllo	heullo	hevllo	hewllo	hexllo	heyllo	hezllo	helalo	helblo	helclo	heldlo	helelo	helflo	helglo	helhlo	helilo	heljlo	helklo	helllo	helmlo	helnlo	helolo	helplo	helqlo	helrlo	helslo	heltlo	helulo	helvlo	helwlo	helxlo	helylo	helzlo	hellao	hellbo	hellco	helldo	helleo	hellfo	hellgo	hellho	hellio	helljo	hellko	helllo	hellmo	hellno	helloo	hellpo	hellqo	hellro	hellso	hellto	helluo	hellvo	hellwo	hellxo	hellyo	hellzo	helloa	hellob	helloc	hellod	helloe	hellof	hellog	helloh	helloi	helloj	hellok	hellol	hellom	hellon	helloo	hellop	helloq	hellor	hellos	hellot	hellou	hellov	hellow	hellox	helloy	helloz
         for (int i = 0; i <= word.length(); ++i) {
             for (char c = 'a'; c <= 'z'; ++c) {
                 resultSet.add(word.substring(0, i) + c + word.substring(i));
@@ -230,20 +253,21 @@ public final class EnWordChecker implements IWordChecker {
 
     /**
      * 格式化单词
-     * @param original 原始信息
+     *
+     * @param original   原始信息
      * @param wordFormat 格式化实现
      * @return 结果
      * @since 0.0.3
      */
     private String formatWord(final String original, final IWordFormat wordFormat) {
-        if(StringUtil.isEmptyTrim(original)) {
+        if (StringUtil.isEmptyTrim(original)) {
             return original;
         }
 
         StringBuilder stringBuilder = new StringBuilder();
         char[] chars = original.toCharArray();
 
-        for(char c : chars) {
+        for (char c : chars) {
             stringBuilder.append(wordFormat.format(c));
         }
         return stringBuilder.toString();
